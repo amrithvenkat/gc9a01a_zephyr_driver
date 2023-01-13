@@ -5,6 +5,9 @@ This driver uses RP2040 (RaspberryPi Pico) as the controller of choice.
 
 Note: All the development in this driver has been to mimic the "out of tree driver" development where minor changes will be implemented to make it work as a part of the main zephyr repository.
 
+Out of tree driver development follow the pattern of https://github.com/teslabs/zds-2022-drivers-app and https://github.com/zephyrproject-rtos/example-application.
+
+
 ## Usage
 1. Set the west workspace using virtual environments of choice and set the zephyr sources.
 
