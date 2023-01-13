@@ -1,0 +1,144 @@
+
+#include <zephyr/dt-bindings/display/gc9a01a.h>
+
+/ {	chosen{
+		zephyr,display=&mydisplay;
+	};
+};
+
+
+/* Pin control section */
+&pinctrl {
+	// I2C1 pinmux
+	// SDA -> GPIO2
+	// SCL -> GPIO3
+	i2c1_alt: i2c1_alt {
+		group1 {
+			pinmux = <I2C1_SDA_P2>, <I2C1_SCL_P3>;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	// SPI1 pinmux
+	// RX  -> GPIO12
+	// TX  -> GPIO15
+	// CSn -> GPIO13 
+	// SCK -> GPIO14
+	/* spi1_alt: spi1_alt{
+		group1 {
+			pinmux = <SPI1_CSN_P13>, <SPI1_SCK_P14>, <SPI1_TX_P15>;
+		};
+		group2 {
+			pinmux = <SPI1_RX_P12>;
+			input-enable;
+		};
+
+	};*/
+
+	// PWM for LCD backlight control.
+	// GPIO 28 -> Slice 6 channel A (refer RP2040 datasheet).
+	pwm_ch6a_lcd_display: pwm_ch6a_lcd_display {
+		group1 {
+			pinmux = <PWM_6A_P28>;
+		};
+	};
+};
+
+/* Enable the watchdog */
+&wdt0 {
+	status = "okay";
+};
+
+/* Disabling unused ADC. */
+&adc {
+	status="okay";
+};
+
+/* Setting clock frequency to FAST. */
+&i2c0 {
+	clock-frequency= <I2C_BITRATE_FAST>;
+};
+
+// Setting the alternative pin mapping for I2C1.
+&i2c1{
+	pinctrl-0=<&i2c1_alt>;
+	clock-frequency = < I2C_BITRATE_FAST >;
+};
+
+/* Setting the GPIO17 as the CS pin on SPI - for the LCD display. */
+&spi0 {
+	cs-gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+	status = "okay";
+
+	mydisplay: mydisplay@0 {
+		compatible = "waveshare,gc9a01a";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+		cmd-data-gpios = <&gpio0 22  GPIO_ACTIVE_HIGH>; 
+		reset-gpios = <&gpio0 21 GPIO_ACTIVE_HIGH>;
+		backlight-gpios = <&pwm_led0>;
+		width = <240>;
+		height = <240>;
+		pixel-format = <GC9A01A_PIXEL_FORMAT_RGB565>;
+		display-inversion;
+		rotation = <180>;
+		status = "okay";
+	};
+};
+
+
+/* Setting the PWM. 
+Challenging but easy once you understand.
+Open and refer RP2040_pwm_pins.jpg or pg523 of the RP2040 datasheet, Table 278.
+Step 1 : Create a pinctrl entry under &pinctrl.
+Step 2 : Update the &pwm entry node.
+Step 3 : Update the &pwm_led0 node.
+
+Consider using GPIO 28 for PWM.
+* Make a &pinctrl entry as seen in line 59-63 of this overlay file.
+Note that it uses pinmux=<PWM_6A_28>. From the image we can see that
+GPIO20 uses PWM channel 2A. (slice -> 2)
+
+* Next, under &pwm node edit the pinctrl-0 to refer to the entry made 
+in the previous step. The divider-frac-N and divider-int-N (change N 
+to the value of slice)
+
+* Finally under &pwm_led0 node edit the entry pwms. Each PWM channel is 
+mapped to 2 GPIOS. GPIO 28 and GPIO 12 are mapped to PWM channel 6A(refer image).
+so the corresponding entry should be
+
+pwms=<&pwm channel frequency flags> => pwms=<&pwm 12 PWM_MSEC(20) PWM_NORMAL_POLARITY> 
+where, 'channel' is (GPIO number) modulo 16.
+
+Files to look out for when developing the rpi_pico.overlay file.
+
+1. /zephyrproject/zephyr/include/zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h
+2. /zephyrproject/zephyr/dts/arm/rpi_pico/rp2040.dtsi
+3. /zephyrproject/zephyr/dts/arm/rpi_pico/rpi_pico_common.dtsi
+4. /zephyrproject/zephyr/boards/arm/rpi_pico/rpi_pico-pinctrl.dtsi
+5. /zephyrproject/zephyr/boards/arm/rpi_pico/rpi_pico.dts
+
+*/
+
+// &pwm {
+// 	status = "okay";
+// 	pinctrl-0 = <&pwm_ch4b_default>;
+// 	divider-frac-4 = <255>;
+// 	divider-int-4 = <255>;
+// };
+
+&pwm {
+	status = "okay";
+	pinctrl-0 = <&pwm_ch6a_lcd_display>;
+	divider-frac-6 = <15>;
+	divider-int-6 = <255>;
+};
+
+&pwm_led0 {
+	status = "okay";
+	pwms = <&pwm 12 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+};
+
+/* The final zephyr.dts device tree file can be found after compiling in
+/build/zephyr/zephyr.dts */
