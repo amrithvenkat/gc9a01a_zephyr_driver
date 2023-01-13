@@ -30,191 +30,20 @@ int gc9a01a_regs_init(const struct device *dev)
     const struct gc9a01a_config *config = dev->config;
 	const struct gc9a01a_regs *regs = config->regs;
 
-    int r;
-	r = gc9a01a_transmit(dev, GC9A01A_INREGEN1, NULL,0);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, GC9A01A_INREGEN2, NULL,0);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0xeb, regs->regeb,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x84, regs->reg84,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x85, regs->reg85,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x86, regs->reg86,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x87, regs->reg87,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x88, regs->reg88,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x89, regs->reg89,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x8a, regs->reg8a,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x8b, regs->reg8b,1);
-	if (r < 0) {
-		return r;
-	}
-		r = gc9a01a_transmit(dev, 0x8c, regs->reg8c,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x8d, regs->reg8d,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x8e, regs->reg8e,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x8f, regs->reg8f,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0xb6, regs->regb6,2);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0x90, regs->reg90,4);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0xbd, regs->regbd,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0xbc, regs->regbc,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev, 0xff, regs->regff,3);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_VREG1A, regs->regvreg1a,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_VREG1B, regs->regvreg1b,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_VREG2A, regs->regvreg2a,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0xbe, regs->regbe,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_GMCTRN1, regs->reggmctrn1,2);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0xdf, regs->regdf,3);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_GAMMA1, regs->reggamma1,6);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_GAMMA2, regs->reggamma2,6);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_GAMMA3, regs->reggamma3,6);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_GAMMA4, regs->reggamma4,6);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0xed, regs->reged,2);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0xae, regs->regae,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0xcd, regs->regcd,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x70, regs->reg70,9);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_FRAMERATE, regs->regframerate,1);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x62, regs->reg62,12);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x63, regs->reg63,12);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x64, regs->reg64,7);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x66, regs->reg66,10);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x67, regs->reg67,10);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x74, regs->reg74,7);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,0x98, regs->reg98,2);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_TEON, NULL,0);
-	if (r < 0) {
-		return r;
-	}
-	r = gc9a01a_transmit(dev,GC9A01A_SLPOUT, NULL,0);
-	if (r < 0) {
-		return r;
-	}
-	k_sleep(K_MSEC(GC9A01A_SLEEP_OUT_TIME));
-
-	r = gc9a01a_transmit(dev,GC9A01A_DISPON, NULL,0);
-	if (r < 0) {
-		return r;
-	}
-	k_sleep(K_MSEC(20));
-
+	//https://github.com/jakkra/ZSWatch init logic updated from this repo
+	const uint8_t *addr=regs->reg_arr;
+	uint8_t cmd, x, numArgs;
+    int i = 0;
+    while ((cmd = *addr++) > 0) {
+        x = *addr++;
+        numArgs = x & 0x7F;
+        gc9a01a_transmit(dev, cmd, addr, numArgs);
+        addr += numArgs;
+        if (x & 0x80) {
+            k_msleep(120);
+        }
+        i++;
+    }
     return 0;
 }
 
