@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2017 Jan Van Winkel <jan.van_winkel@dxplore.eu>
  * Copyright (c) 2019 Nordic Semiconductor ASA
  * Copyright (c) 2020 Teslabs Engineering S.L.
@@ -6,6 +6,8 @@
  * Copyright (c) 2023 Mr Beam Lasers GmbH.
  * Copyright (c) 2023 Amrith Venkat Kesavamoorthi <amrith@mr-beam.org> 
  * SPDX-License-Identifier: Apache-2.0
+ * 
+ * @see https://www.buydisplay.com/download/ic/GC9A01A.pdf
  */
 
 #include "display_gc9a01a.h"
@@ -17,37 +19,49 @@
 
 LOG_MODULE_REGISTER(display_gc9a01a, CONFIG_DISPLAY_LOG_LEVEL);
 
+/*Display data struct*/
 struct gc9a01a_data {
 	uint8_t bytes_per_pixel;
 	enum display_pixel_format pixel_format;
 	enum display_orientation orientation;
 };
 
-
+/**
+ * @brief Initialize GC9A01A registers with DT values.
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 on success, errno otherwise.
+ */
 int gc9a01a_regs_init(const struct device *dev)
 {
 	
     const struct gc9a01a_config *config = dev->config;
 	const struct gc9a01a_regs *regs = config->regs;
 
-	//https://github.com/jakkra/ZSWatch init logic updated from this repo
+    //https://github.com/jakkra/ZSWatch init logic updated from this repo
 	const uint8_t *addr=regs->reg_arr;
 	uint8_t cmd, x, numArgs;
-    int i = 0;
     while ((cmd = *addr++) > 0) {
         x = *addr++;
         numArgs = x & 0x7F;
         gc9a01a_transmit(dev, cmd, addr, numArgs);
         addr += numArgs;
         if (x & 0x80) {
-            k_msleep(120);
+            k_msleep(GC9A01A_SLEEP_OUT_TIME+30); // 30ms on top of the 120ms sleepout time to account for any manufacturing defects.
         }
-        i++;
     }
     return 0;
 }
 
-
+/**
+ * @brief Transmit values to the display driver
+ *
+ * @param dev GC9A01A device instance.
+ * @param cmd command associated with the register.
+ * @param tx_data Data to be sent.
+ * @param tx_len Length of buffer to be sent.
+ * @return 0 on success, errno otherwise.
+ */
 int gc9a01a_transmit(const struct device *dev, uint8_t cmd, const void *tx_data,
 		     size_t tx_len)
 {
@@ -82,6 +96,12 @@ int gc9a01a_transmit(const struct device *dev, uint8_t cmd, const void *tx_data,
 	return 0;
 }
 
+/**
+ * @brief To turn off the sleep mode.
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 on success, errno otherwise.
+ */
 static int gc9a01a_exit_sleep(const struct device *dev)
 {
 	int r;
@@ -91,42 +111,65 @@ static int gc9a01a_exit_sleep(const struct device *dev)
 		return r;
 	}
 
-	k_sleep(K_MSEC(GC9A01A_SLEEP_OUT_TIME));
+	k_msleep(GC9A01A_SLEEP_OUT_TIME);
 
 	return 0;
 }
 
-
-static void gc9a01a_hw_reset(const struct device *dev)
+/**
+ * @brief To turn off the sleep mode.
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 when succesful, errno otherwise.
+ */
+static int gc9a01a_hw_reset(const struct device *dev)
 {
 	const struct gc9a01a_config *config = dev->config;
 
 	if (config->reset.port == NULL) {
-		return;
+		return -ENODEV;
 	}
 
 	gpio_pin_set_dt(&config->reset, 1);
-	k_sleep(K_MSEC(100));
+	k_msleep(100);
 	gpio_pin_set_dt(&config->reset, 0);
-	k_sleep(K_MSEC(100));
+	k_msleep(100);
 	gpio_pin_set_dt(&config->reset, 1);
-	k_sleep(K_MSEC(100));
-
+	k_msleep(100);
+	return 0;
 }
 
+/**
+ * @brief To recover from the sleep mode
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_display_blanking_off(const struct device *dev)
 {
 	LOG_DBG("Turning display blanking off");
 	return gc9a01a_transmit(dev, GC9A01A_DISPON, NULL, 0);
 }
 
+/**
+ * @brief To enter into DISPLAY OFF mode
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_display_blanking_on(const struct device *dev)
 {
 	LOG_DBG("Turning display blanking on");
 	return gc9a01a_transmit(dev, GC9A01A_DISPOFF, NULL, 0);
 }
 
-
+/**
+ * @brief To set the pixel format 
+ *
+ * @param dev GC9A01A device instance.
+ * @param pixel_format Display pixel format
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_set_pixel_format(const struct device *dev,
 			 const enum display_pixel_format pixel_format)
 {
@@ -158,6 +201,13 @@ static int gc9a01a_set_pixel_format(const struct device *dev,
 	return 0;
 }
 
+/**
+ * @brief To set the display orientation.
+ *
+ * @param dev GC9A01A device instance.
+ * @param orientation Display orientation
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_set_orientation(const struct device *dev,
 				   const enum display_orientation orientation)
 {
@@ -166,7 +216,7 @@ static int gc9a01a_set_orientation(const struct device *dev,
 	int r;
 	uint8_t tx_data = GC9A01A_MADCTL_BGR;
 
-	if (orientation == DISPLAY_ORIENTATION_NORMAL) { // workss
+	if (orientation == DISPLAY_ORIENTATION_NORMAL) { // works 0
 		tx_data |= 0;
 	} else if (orientation == DISPLAY_ORIENTATION_ROTATED_90) { // works CW 90
 		tx_data |= GC9A01A_MADCTL_MV | GC9A01A_MADCTL_MY ;
@@ -186,7 +236,12 @@ static int gc9a01a_set_orientation(const struct device *dev,
 	return 0;
 }
 
-
+/**
+ * @brief To do overall display device configuration.
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_configure(const struct device *dev)
 {
 	const struct gc9a01a_config *config = dev->config;
@@ -202,7 +257,7 @@ static int gc9a01a_configure(const struct device *dev)
 		pixel_format = PIXEL_FORMAT_RGB_888;
 	}
 
-	r = gc9a01a_set_pixel_format(dev, pixel_format);
+	r = gc9a01a_set_pixel_format(dev, pixel_format); // Set pixel format.
 	if (r < 0) {
 		return r;
 	}
@@ -218,19 +273,19 @@ static int gc9a01a_configure(const struct device *dev)
 		orientation = DISPLAY_ORIENTATION_ROTATED_270;
 	}
 
-	r = gc9a01a_set_orientation(dev, orientation);
+	r = gc9a01a_set_orientation(dev, orientation); // Set display orientation.
 	if (r < 0) {
 		return r;
 	}
 
 	if (config->inversion) {
-		r = gc9a01a_transmit(dev, GC9A01A_INVON, NULL, 0U);
+		r = gc9a01a_transmit(dev, GC9A01A_INVON, NULL, 0U); // Display inversion mode.
 		if (r < 0) {
 			return r;
 		}
 	}
 
-	r = config->regs_init_fn(dev);
+	r = config->regs_init_fn(dev); // Set all the required registers.
 	if (r < 0) {
 		return r;
 	}
@@ -238,6 +293,13 @@ static int gc9a01a_configure(const struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief To set the backlight brightness of the display.
+ *
+ * @param dev GC9A01A device instance.
+ * @param brightness percentage of brightness of the backlight.
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_set_brightness(const struct device *dev,
 				  const uint8_t brightness)
 {
@@ -253,14 +315,19 @@ static int gc9a01a_set_brightness(const struct device *dev,
 
 }
 
-
+/**
+ * @brief To initialize the peripherals associated with the display.
+ *
+ * @param dev GC9A01A device instance.
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_init(const struct device *dev)
 {
 	const struct gc9a01a_config *config = dev->config;
 
 	int r;
 
-	if (!spi_is_ready_dt(&config->spi)) {
+	if (!spi_is_ready_dt(&config->spi)) { 
 		LOG_ERR("SPI device is not ready");
 		return -ENODEV;
 	}
@@ -291,7 +358,7 @@ static int gc9a01a_init(const struct device *dev)
 
 	gc9a01a_hw_reset(dev);
 
-	k_sleep(K_MSEC(5));
+	k_msleep(5);
 
 	gc9a01a_display_blanking_on(dev);
 
@@ -316,6 +383,16 @@ static int gc9a01a_init(const struct device *dev)
 	return 0;
 }
 
+/**
+ * @brief To set the memory area to transmit on the display
+ *
+ * @param dev GC9A01A device instance.
+ * @param x	start point of the window.
+ * @param y	end point of the window.
+ * @param w	width point of the window.
+ * @param h	height point of the window.
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_set_mem_area(const struct device *dev, const uint16_t x,
 				const uint16_t y, const uint16_t w,
 				const uint16_t h)
@@ -340,6 +417,16 @@ static int gc9a01a_set_mem_area(const struct device *dev, const uint16_t x,
 	return 0;
 }
 
+/**
+ * @brief To handle writing to the display(setting memory area and transmit).
+ *
+ * @param dev  GC9A01A device instance.
+ * @param x	start point of the window.
+ * @param y	end point of the window.
+ * @param desc pointer to the buffer descriptor.
+ * @param buf pointer to the buffer to be sent 
+ * @return 0 when succesful, errno otherwise.
+ */
 static int gc9a01a_write(const struct device *dev, const uint16_t x,
 			 const uint16_t y,
 			 const struct display_buffer_descriptor *desc,
@@ -401,6 +488,16 @@ static int gc9a01a_write(const struct device *dev, const uint16_t x,
 	return 0;
 }
 
+/**
+ * @brief To handle reading from the display.
+ *
+ * @param dev  GC9A01A device instance.
+ * @param x	start point of the window.
+ * @param y	end point of the window.
+ * @param desc pointer to the buffer descriptor.
+ * @param buf pointer to the buffer to be read 
+ * @return Not supported
+ */
 static int gc9a01a_read(const struct device *dev, const uint16_t x,
 			const uint16_t y,
 			const struct display_buffer_descriptor *desc, void *buf)
@@ -409,13 +506,25 @@ static int gc9a01a_read(const struct device *dev, const uint16_t x,
 	return -ENOTSUP;
 }
 
+/**
+ * @brief To get framebuffer from the display.
+ *
+ * @param dev  GC9A01A device instance.
+ * @return Not supported
+ */
 static void *gc9a01a_get_framebuffer(const struct device *dev)
 {
 	LOG_ERR("Direct framebuffer access not supported");
 	return NULL;
 }
 
-
+/**
+ * @brief To set contrast of the display.
+ *
+ * @param dev  GC9A01A device instance.
+ * @param contrast  Contrast value in percentage.
+ * @return Not supported
+ */
 static int gc9a01a_set_contrast(const struct device *dev,
 				const uint8_t contrast)
 {
@@ -423,6 +532,13 @@ static int gc9a01a_set_contrast(const struct device *dev,
 	return -ENOTSUP;
 }
 
+/**
+ * @brief To set contrast of the display.
+ *
+ * @param dev  GC9A01A device instance.
+ * @param capabilities  pointer to the capabalities struct.
+ * @return None.
+ */
 static void gc9a01a_get_capabilities(const struct device *dev,
 				     struct display_capabilities *capabilities)
 {
@@ -447,7 +563,7 @@ static void gc9a01a_get_capabilities(const struct device *dev,
 	capabilities->current_orientation = data->orientation;
 }
 
-
+/*Device driver API*/
 static const struct display_driver_api gc9a01a_api = {
 	.blanking_on = gc9a01a_display_blanking_on,
 	.blanking_off = gc9a01a_display_blanking_off,
@@ -464,7 +580,7 @@ static const struct display_driver_api gc9a01a_api = {
 
 #define INST_DT_GC9A01A(n) DT_INST(n, waveshare_gc9a01a)
 
-#define GC9A01A_INIT(n,t)													\
+#define GC9A01A_INIT(n,t)												\
 	GC9A01A_REGS_INIT(n);												\
 	static const struct gc9a01a_config gc9a01a_config_##n = { 			\
 		.spi = SPI_DT_SPEC_GET(INST_DT_GC9A01A(n), 						\
@@ -477,8 +593,8 @@ static const struct display_driver_api gc9a01a_api = {
 		.backlight = PWM_DT_SPEC_GET(DT_PROP(INST_DT_GC9A01A(n), backlight_gpios)),\
 		.pixel_format = DT_PROP(INST_DT_GC9A01A(n), pixel_format), 		\
 		.rotation= DT_PROP(INST_DT_GC9A01A(n), rotation),        		\
-		.x_resolution = DT_PROP(INST_DT_GC9A01A(n), width),                                	\
-		.y_resolution = DT_PROP(INST_DT_GC9A01A(n), height),                                	\
+		.x_resolution = DT_PROP(INST_DT_GC9A01A(n), width),            	\
+		.y_resolution = DT_PROP(INST_DT_GC9A01A(n), height),            \
 		.inversion = DT_PROP(INST_DT_GC9A01A(n), display_inversion),	\
 		.regs = &gc9a01a_regs_##n,                                   	\
 		.regs_init_fn = gc9a01a_regs_init,                            	\

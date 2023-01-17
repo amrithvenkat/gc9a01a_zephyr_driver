@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (c) 2017 Jan Van Winkel <jan.van_winkel@dxplore.eu>
  * Copyright (c) 2019 Nordic Semiconductor ASA
  * Copyright (c) 2020 Teslabs Engineering S.L.
@@ -7,6 +7,8 @@
  * Copyright (c) 2023 Amrith Venkat Kesavamoorthi <amrith@mr-beam.org> 
  * 
  * SPDX-License-Identifier: Apache-2.0
+ * 
+ * @see https://www.buydisplay.com/download/ic/GC9A01A.pdf
  */
 #ifndef ZEPHYR_DRIVERS_DISPLAY_DISPLAY_GC9A01A_H_
 #define ZEPHYR_DRIVERS_DISPLAY_DISPLAY_GC9A01A_H_
@@ -53,7 +55,7 @@
 #define GC9A01A_RDID2 0xDB ///< Read ID 2
 #define GC9A01A_RDID3 0xDC ///< Read ID 3
 
-#define ILI9341_GMCTRP1 0xE0 ///< Positive Gamma Correction
+#define GC9A01A_GMCTRP1 0xE0 ///< Positive Gamma Correction
 #define GC9A01A_GMCTRN1 0xE1 ///< Negative Gamma Correction
 #define GC9A01A_FRAMERATE 0xE8 ///< Frame rate control
 
@@ -100,11 +102,6 @@
 #define GC9A01A_PIXSET_MCU_18_BIT 0x06
 #define GC9A01A_PIXSET_MCU_16_BIT 0x05
 
-/** X resolution (pixels). */
-#define GC9A01A_X_RES 240U
-/** Y resolution (pixels). */
-#define GC9A01A_Y_RES 240U
-
 /* pg 103 section 6.4.2 of datasheet */
 #define GC9A01A_SLEEP_OUT_TIME 120
 
@@ -113,6 +110,7 @@
 /** Command/data GPIO level for data. */
 #define GC9A01A_DATA 1U
 
+/*Configuration data struct.*/
 struct gc9a01a_config {
     struct spi_dt_spec spi;
     struct gpio_dt_spec cmd_data;
@@ -129,7 +127,7 @@ struct gc9a01a_config {
 
 /* GC9A01A registers to be intitialized*/
 struct gc9a01a_regs {
-    uint8_t reg_arr[233];
+    uint8_t reg_arr[222];
 };
 
 #define GC9A01A_REGS_INIT(n) \
@@ -183,14 +181,7 @@ struct gc9a01a_regs {
     0x00 }\
   };
   
-/**
- * @brief Initialize GC9A01A registers with DT values.
- *
- * @param dev GC9A01A device instance
- * @return 0 on success, errno otherwise.
- */
 int gc9a01a_regs_init(const struct device *dev);
-
 
 int gc9a01a_transmit(const struct device *dev, uint8_t cmd,
 		     const void *tx_data, size_t tx_len);
