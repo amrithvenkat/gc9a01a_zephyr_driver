@@ -1,4 +1,4 @@
-# Waveshare GC9A01A display driver.
+# Waveshare GC9A01A display driver for ZephyrRTOS.
 This driver borrows the code and template of drivers/display/display_ili9xxx.c and .h
 
 This driver uses RP2040 (RaspberryPi Pico) as the controller of choice.
